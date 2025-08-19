@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Weather Result</h2>
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% if suggestion %}
+      <div class="alert alert-info">Did you mean <b>{{ suggestion }}</b>?</div>
+    {% endif %}
+  {% else %}
+    <h2 class="mb-3">Weather for {{ weather.data.city }}</h2>
+
+    <div class="card p-3 mb-3">
+      <div class="row g-3 align-items-center">
+        
+        <!-- LEFT: compact icon + text -->
+        <div class="col-12 col-md-4 text-center">
+          <h6 class="mb-1">{{ weather.data.description | title }}</h6>
+          <img 
+            src="http://openweathermap.org/img/wn/{{ weather.data.icon }}@2x.png" 
+            alt="icon" 
+            style="width:150px; height:150px;"
+          >
+          <p class="mb-1"><b>{{ weather.data.temp }}</b> °C</p>
+          <small class="text-muted">Coords: {{ weather.lat }}, {{ weather.lon }}</small>
+        </div>
+
+        <!-- RIGHT: bigger map -->
+        <div class="col-12 col-md-8">
+          <div id="mapid-weather" style="height:400px; border-radius:10px; overflow:hidden;"></div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <a href="/" class="btn btn-secondary">Back</a>
+
+  <script>
+    var data = {{ weather | tojson }};
+    if (data && data.lat && data.lon) {
+      var map = L.map("mapid-weather").setView([data.lat, data.lon], 11);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+      L.marker([data.lat, data.lon]).addTo(map)
+        .bindPopup(data.data.city)
+        .openPopup();
+    }
+  </script>
+{% endblock %}

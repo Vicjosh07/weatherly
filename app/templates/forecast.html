@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% else %}
+   {% set days = forecast.data.forecast | length %}
+{% set first_date = forecast.data.forecast[0].date if days > 0 else "" %}
+{% set last_date = forecast.data.forecast[-1].date if days > 0 else "" %}
+<h2>{{ days }}-Day Forecast ({{ first_date }} to {{ last_date }}) for {{ forecast.data.city }}</h2>
+
+  <!-- Map -->
+  <div id="mapid-forecast" style="height: 250px; border-radius: 10px;" class="mb-4"></div>
+
+  <div class="row">
+    {% for entry in forecast.data.forecast %}
+      <div class="col-md-2 col-6">
+        <div class="card text-center p-2 mb-3">
+          <h6>{{ entry.date }}</h6>
+          <img src="http://openweathermap.org/img/wn/{{ entry.icon }}@2x.png" alt="icon" style="width:50px;">
+          <p class="mb-1">{{ entry.temp }} °C</p>
+          <small>{{ entry.description }}</small>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  <script>
+    var data = {{ forecast | tojson }};
+    if (data.lat && data.lon) {
+      var map = L.map("mapid-forecast").setView([data.lat, data.lon], 10);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+      L.marker([data.lat, data.lon]).addTo(map)
+        .bindPopup(data.data.city)
+        .openPopup();
+    }
+  </script>
+  {% endif %}
+  <a href="/" class="btn btn-secondary mt-3">Back</a>
+{% endblock %}

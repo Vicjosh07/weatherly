@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1 class="mb-3">Weather App 🌦️</h1>
+
+  <!-- City input -->
+  <form action="/weather" method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="city" class="form-control" placeholder="Enter city">
+      <button type="submit" class="btn btn-primary">Get Weather</button>
+    </div>
+  </form>
+
+  <!-- Zip code input -->
+  <form action="/weather" method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="zip" class="form-control" placeholder="Enter zip code (US)">
+      <button type="submit" class="btn btn-info">Get Weather by Zip</button>
+    </div>
+  </form>
+
+  <!-- Current location -->
+  <a href="/weather/current" class="btn btn-success">Use My Current Location 🌍</a>
+
+  <!-- Forecast -->
+  <form action="/forecast" method="get" class="mt-4 mb-4">
+    <div class="input-group">
+      <input type="text" name="city" class="form-control" placeholder="Enter city for 5-day forecast">
+      <button type="submit" class="btn btn-warning">5-Day Forecast</button>
+    </div>
+  </form>
+
+  <!-- Date range forecast form -->
+<!-- Date range forecast form -->
+<form action="/forecast/range" method="get" class="row g-2 mb-4 align-items-center">
+  <div class="col-auto">
+    <input type="text" name="city" class="form-control" placeholder="City (e.g. London)" required>
+  </div>
+
+  <div class="col-auto">
+    <input
+      type="date"
+      name="start"
+      class="form-control"
+      required
+      min="{{ today }}"
+      max="{{ max_date }}"
+      value="{{ today }}"
+    >
+  </div>
+
+  <div class="col-auto">
+    <input
+      type="date"
+      name="end"
+      class="form-control"
+      required
+      min="{{ today }}"
+      max="{{ max_date }}"
+      value="{{ max_date }}"
+    >
+  </div>
+
+  <div class="col-auto">
+    <button class="btn btn-warning" type="submit">Get Range Forecast</button>
+  </div>
+</form>
+
+
+{% endblock %}

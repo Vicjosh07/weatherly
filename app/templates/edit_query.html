@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Edit Query</h2>
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+
+  <!-- Map of current query location -->
+  <div id="mapid-edit-{{ query.id }}" style="height: 250px; border-radius: 10px;" class="mb-3"></div>
+
+  <!-- Edit form: location + start/end date -->
+  <form action="/queries/{{ query.id }}/update" method="post" class="mb-3">
+    <div class="mb-3">
+      <label class="form-label">Location</label>
+      <input type="text" class="form-control" name="location" value="{{ query.location }}" required>
+    </div>
+
+    <div class="row g-2 align-items-center mb-2">
+      <div class="col-auto">
+        <label class="form-label">Start Date</label>
+        <input
+          type="date"
+          name="start_date"
+          id="start-date-{{ query.id }}"
+          class="form-control"
+          {% if query.date_range and ' to ' in query.date_range %}
+            value="{{ query.date_range.split(' to ')[0] }}"
+          {% else %}
+            value=""
+          {% endif %}
+        >
+      </div>
+
+      <div class="col-auto">
+        <label class="form-label">End Date</label>
+        <input
+          type="date"
+          name="end_date"
+          id="end-date-{{ query.id }}"
+          class="form-control"
+          {% if query.date_range and ' to ' in query.date_range %}
+            value="{{ query.date_range.split(' to ')[1] }}"
+          {% else %}
+            value=""
+          {% endif %}
+        >
+      </div>
+
+      <div class="col-auto">
+        <label class="form-label">Range (days)</label>
+        <input type="text" id="range-display-{{ query.id }}" class="form-control" readonly>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" name="action" value="update" class="btn btn-success">Update</button>
+      <button type="submit" name="action" value="view" class="btn btn-primary">View</button>
+      <a href="/queries/" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+
+  <script>
+  {% if query.parsed %}
+    var data = {{ query.parsed | tojson }};
+    if (data && data.lat && data.lon) {
+      var map = L.map("mapid-edit-{{ query.id }}").setView([data.lat, data.lon], 11);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> contributors'
+      }).addTo(map);
+      L.marker([data.lat, data.lon]).addTo(map)
+        .bindPopup(data.data.city || "{{ query.location }}")
+        .openPopup();
+    }
+  {% endif %}
+
+  // date-range helper
+  (function() {
+    const startEl = document.getElementById("start-date-{{ query.id }}");
+    const endEl = document.getElementById("end-date-{{ query.id }}");
+    const displayEl = document.getElementById("range-display-{{ query.id }}");
+
+    function computeRange() {
+      const s = startEl.value;
+      const e = endEl.value;
+      if (!s || !e) {
+        displayEl.value = "";
+        return;
+      }
+      const sd = new Date(s);
+      const ed = new Date(e);
+      if (ed < sd) {
+        displayEl.value = "Invalid (end before start)";
+        return;
+      }
+      // number of calendar days inclusive
+      const diff = Math.floor((ed - sd) / (1000*60*60*24)) + 1;
+      displayEl.value = diff + (diff === 1 ? " day" : " days");
+      // enforce OpenWeatherMap 5-day max (<=5)
+      if (diff > 5) {
+        displayEl.value += " — max 5 days allowed";
+      }
+    }
+
+    // keep end.min >= start
+    function syncMin() {
+      if (startEl.value) {
+        endEl.min = startEl.value;
+      } else {
+        endEl.removeAttribute("min");
+      }
+      computeRange();
+    }
+
+    startEl.addEventListener("change", syncMin);
+    endEl.addEventListener("change", computeRange);
+
+    // initialize on load
+    syncMin();
+  })();
+  </script>
+
+{% endblock %}
