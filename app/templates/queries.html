@@ -14,7 +14,7 @@
       {% for q in queries %}
         <div class="list-group-item mb-4">
           <b>{{ q.location }}</b> ({{ q.date_range or 'N/A' }})
-          <pre style="background:#f8f9fa; padding:5px;">{{ q.result }}</pre>
+          <pre style="padding:5px;">{{ q.result }}</pre>
 
           <!-- Map Container -->
           <div id="mapid-{{ q.id }}" style="height: 250px; border-radius: 10px;" class="mt-3"></div>
