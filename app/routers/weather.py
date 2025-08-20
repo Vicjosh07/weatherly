@@ -1,10 +1,9 @@
-import os
 import requests
 from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from collections import defaultdict
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 import json
 from sqlalchemy.orm import Session
 from fastapi import Depends
@@ -12,7 +11,7 @@ from app.database import get_db
 from app import models
 
 
-VALID_CITIES = ["London", "Paris", "New York", "Berlin", "Tokyo", "Lagos", "Nairobi"]  # extend later
+# VALID_CITIES = ["London", "Paris", "New York", "Berlin", "Tokyo", "Lagos", "Nairobi"]  # extend later
 
 
 
@@ -36,6 +35,7 @@ def validate_input(city: str = None, zip: str = None):
             return None, "Zip code must be 5 digits (US only)."
         return zip, None
     return None, "Please enter either a city or a zip code."
+
 @router.get("/weather", response_class=HTMLResponse)
 async def get_weather(
     request: Request,
@@ -51,58 +51,47 @@ async def get_weather(
             "weather": None
         })
 
-    # Build API URL
     if city:
         url = f"{BASE_URL}weather?q={user_input}&appid={API_KEY}&units=metric"
     elif zip:
         url = f"{BASE_URL}weather?zip={user_input},us&appid={API_KEY}&units=metric"
-    else:
-        return templates.TemplateResponse("weather.html", {
-            "request": request,
-            "error": "No input provided.",
-            "weather": None
-        })
 
-    # Call API
     res = requests.get(url)
     data = res.json()
 
-    # Handle failed responses cleanly
     if res.status_code != 200 or "main" not in data:
         return templates.TemplateResponse("weather.html", {
             "request": request,
-            "error": f"Could not fetch weather for '{city or zip}'.",
+            "error": f"Could not fetch weather for '{city or zip}'. Please Confirm your entry.",
             "weather": None
         })
 
-    # Build weather object safely
     weather = {
         "lat": data["coord"]["lat"],
         "lon": data["coord"]["lon"],
         "data": {
             "type": "weather",
-            "city": data.get("name", city or zip),
+            "city": data["name"],
             "temp": data["main"]["temp"],
             "description": data["weather"][0]["description"],
             "icon": data["weather"][0]["icon"]
         }
     }
 
-    # Save query to DB
     db_query = models.WeatherQuery(
         location=weather["data"]["city"],
         date_range="current",
         result=json.dumps(weather)
     )
+
     db.add(db_query)
     db.commit()
 
-    # Always pass weather (never undefined)
     return templates.TemplateResponse("weather.html", {
         "request": request,
-        "weather": weather,
-        "error": None
+        "weather": weather
     })
+
 
 @router.get("/forecast", response_class=HTMLResponse)
 async def get_forecast(request: Request, city: str = Query(..., min_length=2), db: Session = Depends(get_db)):
@@ -211,10 +200,6 @@ async def get_forecast_range(
     end: str = Query(..., regex=r"^\d{4}-\d{2}-\d{2}$"),
     db: Session = Depends(get_db)
 ):
-    """
-    Example: /forecast/range?city=London&start=2025-08-18&end=2025-08-20
-    Uses OpenWeatherMap 5-day forecast and returns midday picks for each date in the range.
-    """
     # validate city input (reuse validate_input but bypass the isalpha check for city param)
     user_input = city.strip().title()
 

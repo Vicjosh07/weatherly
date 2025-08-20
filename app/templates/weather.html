@@ -39,16 +39,10 @@
     <a href="/" class="btn btn-secondary">Back</a>
   {% endif %}
 
-  <script>
-    // Only serialize when weather exists to avoid "Undefined is not JSON serializable"
     {% if weather %}
-      var data = {{ weather | tojson }};
-    {% else %}
-      var data = null;
-    {% endif %}
-
-    if (data && data.lat && data.lon && document.getElementById("mapid-weather")) {
-      // create map only once
+  <script>
+    var data = {{ weather | tojson }};
+    if (data && data.lat && data.lon) {
       var map = L.map("mapid-weather").setView([data.lat, data.lon], 11);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; OpenStreetMap contributors'
@@ -58,4 +52,10 @@
         .openPopup();
     }
   </script>
+  {% else %}
+  <script>
+    // No weather data (handled by template with error message). Guarding JS to avoid crashes.
+    var data = null;
+  </script>
+  {% endif %}
 {% endblock %}
