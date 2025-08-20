@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 from app.database import get_db
 from app import models
+import re
 
 
 # VALID_CITIES = ["London", "Paris", "New York", "Berlin", "Tokyo", "Lagos", "Nairobi"]  # extend later
@@ -27,8 +28,9 @@ BASE_URL = "http://api.openweathermap.org/data/2.5/"
 def validate_input(city: str = None, zip: str = None):
     if city:
         city = city.strip().title()
-        if not city.isalpha():  # crude check (no numbers)
-            return None, "City names should only contain letters."
+        # Allow alphabets + spaces + hyphens (e.g. "New York", "Rio-de-Janeiro")
+        if not re.match(r"^[A-Za-z]+(?:[\s-][A-Za-z]+)*$", city):
+            return None, "City names should only contain letters, spaces, or hyphens."
         return city, None
     if zip:
         if not zip.isdigit() or len(zip) != 5:
