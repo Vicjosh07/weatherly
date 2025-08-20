@@ -1,24 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
   <h2>Weather Result</h2>
+
   {% if error %}
     <div class="alert alert-danger">{{ error }}</div>
     {% if suggestion %}
       <div class="alert alert-info">Did you mean <b>{{ suggestion }}</b>?</div>
     {% endif %}
-  {% else %}
+  {% elif weather %}
     <h2 class="mb-3">Weather for {{ weather.data.city }}</h2>
 
     <div class="card p-3 mb-3">
       <div class="row g-3 align-items-center">
-        
         <!-- LEFT: compact icon + text -->
         <div class="col-12 col-md-4 text-center">
           <h6 class="mb-1">{{ weather.data.description | title }}</h6>
           <img 
             src="http://openweathermap.org/img/wn/{{ weather.data.icon }}@2x.png" 
             alt="icon" 
-            style="width:150px; height:150px;"
+            style="width:100px; height:100px; object-fit:contain;"
           >
           <p class="mb-1"><b>{{ weather.data.temp }}</b> °C</p>
           <small class="text-muted">Coords: {{ weather.lat }}, {{ weather.lon }}</small>
@@ -30,13 +30,25 @@
         </div>
       </div>
     </div>
+
+    <a href="/" class="btn btn-secondary">Back</a>
+
+  {% else %}
+    <!-- Neither error nor weather: show friendly prompt -->
+    <div class="alert alert-secondary">No weather data — try searching a city or zip code.</div>
+    <a href="/" class="btn btn-secondary">Back</a>
   {% endif %}
 
-  <a href="/" class="btn btn-secondary">Back</a>
-
   <script>
-    var data = {{ weather | tojson }};
-    if (data && data.lat && data.lon) {
+    // Only serialize when weather exists to avoid "Undefined is not JSON serializable"
+    {% if weather %}
+      var data = {{ weather | tojson }};
+    {% else %}
+      var data = null;
+    {% endif %}
+
+    if (data && data.lat && data.lon && document.getElementById("mapid-weather")) {
+      // create map only once
       var map = L.map("mapid-weather").setView([data.lat, data.lon], 11);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; OpenStreetMap contributors'

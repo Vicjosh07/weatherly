@@ -36,7 +36,6 @@ def validate_input(city: str = None, zip: str = None):
             return None, "Zip code must be 5 digits (US only)."
         return zip, None
     return None, "Please enter either a city or a zip code."
-
 @router.get("/weather", response_class=HTMLResponse)
 async def get_weather(
     request: Request,
@@ -48,48 +47,61 @@ async def get_weather(
     if error:
         return templates.TemplateResponse("weather.html", {
             "request": request,
-            "error": error
+            "error": error,
+            "weather": None
         })
 
+    # Build API URL
     if city:
         url = f"{BASE_URL}weather?q={user_input}&appid={API_KEY}&units=metric"
     elif zip:
         url = f"{BASE_URL}weather?zip={user_input},us&appid={API_KEY}&units=metric"
+    else:
+        return templates.TemplateResponse("weather.html", {
+            "request": request,
+            "error": "No input provided.",
+            "weather": None
+        })
 
+    # Call API
     res = requests.get(url)
     data = res.json()
 
+    # Handle failed responses cleanly
     if res.status_code != 200 or "main" not in data:
         return templates.TemplateResponse("weather.html", {
             "request": request,
-            "error": f"Could not fetch weather for '{city or zip}'."
+            "error": f"Could not fetch weather for '{city or zip}'.",
+            "weather": None
         })
 
+    # Build weather object safely
     weather = {
-    "lat": data["coord"]["lat"],
-    "lon": data["coord"]["lon"],
-    "data": {
-        "type": "weather",
-        "city": data["name"],
-        "temp": data["main"]["temp"],
-        "description": data["weather"][0]["description"],
-        "icon": data["weather"][0]["icon"]
+        "lat": data["coord"]["lat"],
+        "lon": data["coord"]["lon"],
+        "data": {
+            "type": "weather",
+            "city": data.get("name", city or zip),
+            "temp": data["main"]["temp"],
+            "description": data["weather"][0]["description"],
+            "icon": data["weather"][0]["icon"]
         }
     }
 
-    # with this:
+    # Save query to DB
     db_query = models.WeatherQuery(
-        location=weather["data"]["city"],   # use API-returned city name
+        location=weather["data"]["city"],
         date_range="current",
         result=json.dumps(weather)
     )
-
     db.add(db_query)
     db.commit()
 
+    # Always pass weather (never undefined)
     return templates.TemplateResponse("weather.html", {
         "request": request,
-        "weather": weather
+        "weather": weather,
+        "error": None
     })
 
 @router.get("/forecast", response_class=HTMLResponse)
