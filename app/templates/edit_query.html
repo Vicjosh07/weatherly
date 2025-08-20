@@ -1,12 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
   <h2>Edit Query</h2>
+
   {% if error %}
     <div class="alert alert-danger">{{ error }}</div>
   {% endif %}
 
   <!-- Map of current query location -->
   <div id="mapid-edit-{{ query.id }}" style="height: 250px; border-radius: 10px;" class="mb-3"></div>
+
+  {# Robustly extract start/end date from query.date_range (accepts "YYYY-MM-DD to YYYY-MM-DD" or "YYYY-MM-DDtoYYYY-MM-DD" variants) #}
+  {% set start_val = "" %}
+  {% set end_val = "" %}
+  {% if query.date_range and query.date_range != "current" %}
+    {% if "to" in query.date_range %}
+      {% set parts = query.date_range.split("to") %}
+      {% if parts|length >= 2 %}
+        {% set start_val = parts[0].strip() %}
+        {% set end_val = parts[1].strip() %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
 
   <!-- Edit form: location + start/end date -->
   <form action="/queries/{{ query.id }}/update" method="post" class="mb-3">
@@ -23,11 +37,7 @@
           name="start_date"
           id="start-date-{{ query.id }}"
           class="form-control"
-          {% if query.date_range and ' to ' in query.date_range %}
-            value="{{ query.date_range.split(' to ')[0] }}"
-          {% else %}
-            value=""
-          {% endif %}
+          value="{{ start_val }}"
         >
       </div>
 
@@ -38,11 +48,7 @@
           name="end_date"
           id="end-date-{{ query.id }}"
           class="form-control"
-          {% if query.date_range and ' to ' in query.date_range %}
-            value="{{ query.date_range.split(' to ')[1] }}"
-          {% else %}
-            value=""
-          {% endif %}
+          value="{{ end_val }}"
         >
       </div>
 
@@ -71,9 +77,11 @@
         .bindPopup(data.data.city || "{{ query.location }}")
         .openPopup();
     }
+  {% else %}
+    // no parsed data; optionally show a placeholder or keep map empty
   {% endif %}
 
-  // date-range helper
+  // date-range helper (keeps end.min >= start, computes inclusive days)
   (function() {
     const startEl = document.getElementById("start-date-{{ query.id }}");
     const endEl = document.getElementById("end-date-{{ query.id }}");
@@ -101,7 +109,6 @@
       }
     }
 
-    // keep end.min >= start
     function syncMin() {
       if (startEl.value) {
         endEl.min = startEl.value;
@@ -111,6 +118,7 @@
       computeRange();
     }
 
+    // listeners
     startEl.addEventListener("change", syncMin);
     endEl.addEventListener("change", computeRange);
 
